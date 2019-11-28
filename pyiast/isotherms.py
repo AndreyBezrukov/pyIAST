@@ -26,7 +26,7 @@ _VERSION = "1.4.3"
 
 # ! list of models implemented in pyIAST
 _MODELS = [
-    "Langmuir", "Quadratic", "BET", "Henry", "TemkinApprox", "DSLangmuir"
+    "Langmuir", "Quadratic", "BET", "Henry", "TemkinApprox", "DSLangmuir", "DSLangmuir-Freundlich"
 ]
 
 # ! dictionary of parameters involved in each model
@@ -50,6 +50,14 @@ _MODEL_PARAMS = {
         "K1": np.nan,
         "M2": np.nan,
         "K2": np.nan
+    },
+    "DSLangmuir-Freundlich": {
+        "M1": np.nan,
+        "K1": np.nan,
+        "N1": np.nan,
+        "M2": np.nan,
+        "K2": np.nan,
+        "N2": np.nan
     },
     "TemkinApprox": {
         "M": np.nan,
@@ -115,6 +123,16 @@ def get_default_guess_params(model, df, pressure_key, loading_key):
             "K1": 0.4 * langmuir_k,
             "M2": 0.5 * saturation_loading,
             "K2": 0.6 * langmuir_k
+        }
+
+    if model == "DSLangmuir-Freundlich":
+        return {
+            "M1": 0.5 * saturation_loading,
+            "K1": 0.4 * langmuir_k,
+            "N1": 1,
+            "M2": 0.5 * saturation_loading,
+            "K2": 0.6 * langmuir_k,
+            "N2": 1.5
         }
 
     if model == "Henry":
@@ -275,6 +293,12 @@ class ModelIsotherm:
             return self.params["M1"] * k1p / (1.0 + k1p) + \
                    self.params["M2"] * k2p / (1.0 + k2p)
 
+        if self.model == "DSLangmuir-Freundlich":
+            k1pn = (self.params["K1"] * pressure)**self.params["N1"]
+            k2pn = (self.params["K2"] * pressure)**self.params["N2"]
+            return self.params["M1"] * k1pn / (1.0 + k1pn) + \
+                   self.params["M2"] * k2pn / (1.0 + k2pn)
+
         if self.model == "Henry":
             return self.params["KH"] * pressure
 
@@ -364,6 +388,12 @@ class ModelIsotherm:
                 1.0 + self.params["K1"] * pressure) +\
                    self.params["M2"] * np.log(
                        1.0 + self.params["K2"] * pressure)
+
+        if self.model == "DSLangmuir-Freundlich":
+            return self.params["M1"] / self.params["N1"] * np.log(
+                1.0 + (self.params["K1"] * pressure)**self.params["N1"]) +\
+                   self.params["M2"] / self.params["N2"] * np.log(
+                       1.0 + (self.params["K2"] * pressure)**self.params["N2"])
 
         if self.model == "Henry":
             return self.params["KH"] * pressure
